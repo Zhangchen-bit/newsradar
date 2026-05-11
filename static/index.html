@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>News Radar</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="dot pulse"></span>
+    <span class="brand-name">News Radar</span>
+    <span id="conn-state" class="conn-state">connecting…</span>
+  </div>
+  <div class="filters">
+    <label>最低重要度
+      <select id="min-importance">
+        <option value="1">1（全部）</option>
+        <option value="2" selected>2（重要+）</option>
+        <option value="3">3（红色）</option>
+      </select>
+    </label>
+    <label class="checkbox">
+      <input id="only-verified" type="checkbox"> 仅已核实
+    </label>
+    <button id="refresh-btn" title="手动刷新">↻ 刷新</button>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- LEFT: live feed -->
+  <section class="feed">
+    <div class="section-title">
+      <span>快讯流</span>
+      <span id="feed-count" class="count-badge">…</span>
+    </div>
+    <div id="feed-list" class="feed-list">
+      <div class="placeholder">加载中…</div>
+    </div>
+  </section>
+
+  <!-- RIGHT: 3 windows x 8 topics -->
+  <section class="summaries">
+    <div class="windows-tabs">
+      <button class="win-tab active" data-win="1h">1 小时</button>
+      <button class="win-tab" data-win="5h">5 小时</button>
+      <button class="win-tab" data-win="24h">24 小时</button>
+      <span id="summary-meta" class="summary-meta"></span>
+    </div>
+    <div id="topics" class="topics-grid">
+      <div class="placeholder">加载中…</div>
+    </div>
+  </section>
+</main>
+
+<!-- Cluster detail modal -->
+<div id="cluster-modal" class="modal hidden" onclick="if(event.target===this)closeModal()">
+  <div class="modal-body">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
