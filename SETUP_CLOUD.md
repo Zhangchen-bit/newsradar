@@ -1,124 +1,81 @@
-# 部署到 GitHub Pages + Actions（零成本）
+# 部署到 GitHub Pages + Actions（单仓库版，零成本）
 
 > 让任何人开 URL 就能看到 News Radar，访客自带 LLM key。
-> 你的私有代码不公开，只有去重后的新闻 JSON 走公网。
+> Repo 是公开的，Actions 用内置 GITHUB_TOKEN 提交，不用 PAT、不用第二个仓库。
 
 ---
 
 ## 总览
 
 ```
-┌──────────── 私有 newsradar 仓库 ─────────────┐
-│  源码 + .github/workflows/refresh-news.yml    │
+┌──────────── 公开 newsradar 仓库 ─────────────┐
+│  源码 + cloud_export.py + Actions             │
 │  Actions: 每 15 分钟跑 cloud_export.py        │
-│           → REST API PUT 到下面这个公开仓     │
-└──────────────────────│─────────────────────┘
-                       ↓
-┌──────────── 公开 newsradar-public 仓库 ──────┐
-│  index.html / style.css / app.js  (前端)     │  ← 一次性手动 push
-│  news.json                                    │  ← Actions 自动覆盖
+│           → commit static_public/news.json    │
 │                                               │
-│  GitHub Pages: https://Zhangchen-bit.github   │
-│                .io/newsradar-public/          │
+│  GitHub Pages: https://<user>.github.io/      │
+│                newsradar/                     │
+│      ← 来源：main 分支的 static_public/       │
 └──────────────────────────────────────────────┘
 ```
 
 **成本**：0
-**更新频率**：news.json 每 15 分钟刷一次
-**LLM**：访客在浏览器填自己 API key，钱各付各的
-**Actions 月用量**：~96 次/天 × 30 = 2880 次，每次 ~25-40 秒 = **1200-1900 分钟/月**（私有仓库免费额度 2000 分钟）
+**更新频率**：news.json 每 15 分钟刷一次（cron 会有 5-15 分钟随机延迟，所以实际间隔可能 15-30 分钟）
+**LLM**：访客在浏览器填自己的 API key
+**Actions 公开仓库**：无限分钟数
 
 ---
 
-## Step 1 — 在 GitHub 上建公开仓库
+## Step 1 — Repo 改成 Public
 
-1. 打开 https://github.com/new
-2. 名字：`newsradar-public`
-3. 选 **Public**
-4. 勾选 "Add a README"（随便，会被覆盖）
-5. 点 Create
+1. 打开 `https://github.com/Zhangchen-bit/newsradar/settings`
+2. 滚到最下面 "Danger Zone" → "Change visibility"
+3. 改成 Public，按提示确认仓库名
 
----
-
-## Step 2 — 一次性把前端推上去
-
-```bash
-cd /Users/apple/Desktop/投资计划/newsradar
-git clone git@github.com:Zhangchen-bit/newsradar-public.git /tmp/nrp
-cp static_public/index.html /tmp/nrp/
-cp static_public/style.css  /tmp/nrp/
-cp static_public/app.js     /tmp/nrp/
-cd /tmp/nrp
-git add -A
-git commit -m "frontend"
-git push
-```
-
-未来前端代码改了，**重复这一步**就行（覆盖 3 个文件）。
+> 此前已审计过 repo，**无任何 API key / token / 敏感数据**。
 
 ---
 
-## Step 3 — 在公开仓库开启 GitHub Pages
+## Step 2 — 启用 GitHub Pages
 
-1. 打开 `https://github.com/Zhangchen-bit/newsradar-public/settings/pages`
+1. 打开 `https://github.com/Zhangchen-bit/newsradar/settings/pages`
 2. **Source**：Deploy from a branch
-3. **Branch**：`main` + `/` (root)
-4. Save
-5. 等 1-2 分钟，提示页面上会出现 `Your site is live at https://Zhangchen-bit.github.io/newsradar-public/`
+3. **Branch**：`main`
+4. **Folder**：`/static_public`
+5. Save
 
-打开这个 URL，应该能看到雷达界面（但 `news.json` 还没生成，所以快讯流是空的）。
+等 1-2 分钟，页面顶部会出现：
+> Your site is live at `https://Zhangchen-bit.github.io/newsradar/`
 
----
-
-## Step 4 — 生成 PAT 让 Actions 能写公开仓
-
-1. 打开 https://github.com/settings/personal-access-tokens/new
-2. 选 **Fine-grained tokens**
-3. Token name：`newsradar-data-write`
-4. Expiration：选你舒服的（建议 90 天，到期再续）
-5. Repository access：**Only select repositories** → 选 `newsradar-public`
-6. Permissions → Repository permissions →
-   - **Contents**: Read and write
-7. 点 Generate token → 复制下来（只显示一次）
+打开这个 URL，前端能加载（但 `news.json` 还没生成，所以快讯流空着）。
 
 ---
 
-## Step 5 — 把 PAT + 目标仓库路径设为私有仓库的 secret
-
-1. 打开 `https://github.com/Zhangchen-bit/newsradar/settings/secrets/actions`
-2. 点 **New repository secret**：
-   - Name：`DATA_REPO_PAT`
-   - Value：粘贴刚才的 PAT
-3. 再 **New repository secret**：
-   - Name：`DATA_REPO_PATH`
-   - Value：`Zhangchen-bit/newsradar-public`
-
----
-
-## Step 6 — 手动触发一次 Actions 验证
+## Step 3 — 手动触发一次 Actions 把 news.json 灌进去
 
 1. 打开 `https://github.com/Zhangchen-bit/newsradar/actions`
 2. 左侧选 `Refresh news.json`
-3. 右上角 **Run workflow** → Run
-4. 等 30-60 秒，看到绿色 ✓
+3. 右上角 **Run workflow** → 选 main 分支 → Run
 
-打开 `https://github.com/Zhangchen-bit/newsradar-public` 应该能看到 `news.json` 出现，再开雷达 URL 就有数据了。
+等 30-60 秒看到绿色 ✓。Actions 会自动 commit 一条 `data: refresh ...`。
 
----
-
-## Step 7 — 等 cron 自动跑
-
-Workflow 已经设了 `*/15 * * * *`（每 15 分钟一次）。之后什么都不用管。
-
-GitHub Actions cron **可能延迟 5-15 分钟**触发（这是 GitHub 的已知行为），所以实际刷新间隔可能是 15-30 分钟。要更准时可以缩短到 `*/10`，但要算好 Actions 额度。
+第一次跑完后再刷新 Pages URL，左栏应该出现快讯流。
 
 ---
 
-## 改频率 / 临时停掉
+## Step 4 — 等 cron 自动跑
 
-- **改频率**：编辑 `.github/workflows/refresh-news.yml` 的 `cron` 字段
-- **临时停**：去 Actions 页面右上角点 `...` → Disable workflow
-- **手动触发**：Actions 页面 → Refresh news.json → Run workflow
+Workflow 已经设 `*/15 * * * *`，之后什么都不用管。
+
+注意 GitHub cron **不是精确触发**，常延迟 5-15 分钟才跑。要更频繁可以改成 `*/10`，公开仓库无 Actions 分钟限制。
+
+---
+
+## 改频率 / 临时停掉 / 重新触发
+
+- **改频率**：编辑 `.github/workflows/refresh-news.yml` 的 `cron`
+- **临时停**：Actions 页面 → Refresh news.json → 右上角 ··· → Disable workflow
+- **手动重跑**：Actions 页面 → Refresh news.json → Run workflow
 
 ---
 
@@ -126,16 +83,37 @@ GitHub Actions cron **可能延迟 5-15 分钟**触发（这是 GitHub 的已知
 
 | 问题 | 排查 |
 |---|---|
-| Actions 失败，提示 `cls.cn timeout` | GitHub runner 在美国/欧洲，财联社可能限制境外 IP。`cloud_export.py` 已做"部分失败容忍"，只要 jin10 + wscn 成功就照常出 JSON。`source_status` 字段会标注哪家失败 |
-| `news.json` 没更新 | 看 Actions 日志：`https://github.com/Zhangchen-bit/newsradar/actions` |
-| PAT 过期 | 重生成一个，更新 secret |
-| 网页一直显示"数据已过期" | 检查 news.json 的 `is_stale` 字段；可能 Actions 没跑 / 全部数据源都失败了 |
-| GitHub Pages 没出现 | 设置里检查 Branch / Folder；GitHub Pages 首次部署可能要 5-10 分钟 |
+| 网页一直显示"数据已过期" | 看 Actions 日志，可能全部源都失败了 |
+| Actions 日志说 `cls.cn timeout` | GitHub runner 在美国/欧洲，财联社经常拒境外 IP。代码已做容错——只要 jin10+wscn 通就照常出 JSON，`source_status` 字段会标 cls 失败 |
+| Pages 没出现 / 一直 404 | 设置里检查 Branch=main、Folder=`/static_public`；首次部署可能要 5-10 分钟 |
+| `news.json` 一直在 commit 也没更新内容 | 看 cloud_export.py 是否能在本地跑通（`python3 cloud_export.py --out /tmp/x.json`） |
+| commit 太频繁污染 git log | 当前每 15 分钟一次。**未来嫌脏**可以改成 push 到独立 `data` 分支并 force-push（保留主分支干净），需要时让我改 |
 
 ---
 
-## 下一步（如果觉得 15 分钟太慢）
+## 进阶：减少 commit 噪音（可选）
 
-- 换成自己的 VPS + cron：每分钟跑 `cloud_export.py`，rsync 到 Cloudflare Pages 或自建 nginx
-- 用 Cloudflare Workers + KV：Actions 推到 KV，访客读取延迟 < 100ms
-- 上 Vercel / Cloudflare Pages：连私有仓库，前端独立部署，news.json 还是走 GitHub Pages 公开仓
+如果你不想 main 分支被 Actions 频繁 commit 撑大，可以把 news.json 放到一个 `data` 独立分支，每次 force-push 覆盖单一 commit，主分支永远干净：
+
+```yaml
+# 替换 workflow 末尾的 Commit if changed
+- name: Push to data branch (orphan, force)
+  run: |
+    git config user.email "actions@github.com"
+    git config user.name "newsradar-bot"
+    git checkout --orphan data
+    git rm -rf . > /dev/null
+    cp static_public/news.json .
+    git add news.json
+    git commit -m "$(date -u +%Y-%m-%dT%H:%MZ)"
+    git push -f origin data
+```
+
+然后改前端 `app.js`：
+```js
+const NEWS_JSON_URL = "https://raw.githubusercontent.com/Zhangchen-bit/newsradar/data/news.json";
+```
+
+这种方式 main 分支永远只有源码变更，data 分支永远只有 1 个 commit。代价：raw.githubusercontent.com 有 5 分钟 CDN 缓存（影响最坏 +5 分钟延迟）。
+
+**当前不做**，先用简单方案跑起来。
