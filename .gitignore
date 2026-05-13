@@ -1,6 +1,7 @@
 # Runtime data
 data/
 logs/
+static_public/news.json
 
 # Python
 __pycache__/

@@ -218,11 +218,40 @@ cd /Users/apple/Desktop/投资计划/newsradar
 # 浏览器打开 http://127.0.0.1:8765
 ```
 
-## 全部阶段完成
+## V1 全部阶段完成
 
 P1（采集）/ P2（去重）/ P2.5（iFinD 核验）/ P3（API）/ P4（LLM 摘要）/ P5（前端）均已落地。
 
+## B 版（BYOK）落地（2026-05-13）
+
+为了能把雷达**分享给任何人**而又不烧站长 LLM 配额，新增 BYOK 公开版（参见 [PLAN_BYOK.md](PLAN_BYOK.md)）：
+
+| 组件 | 文件 | 功能 |
+|---|---|---|
+| 静态导出器 | `exporter.py` | 把去重后的 cluster feed 导出为 `static_public/news.json` |
+| 导出 worker | `run_exporter.py` | 每 60s 重导，由 `run_all.py` 托管 |
+| BYOK 前端 | `static_public/index.html` + `style.css` + `app.js` | 公开 URL，访客自带 LLM key |
+| FastAPI 挂载 | `api.py` 加 `/public` 路由 | 本地开发同时跑 V1 admin + V2 BYOK |
+
+**BYOK 数据流**：
+```
+访客浏览器:
+  GET /public/news.json   ← 静态文件，站长出小钱托管
+  POST 访客填的 LLM API    ← 访客自己付费，钱不经过站长
+  摘要结果缓存到 localStorage（cluster_hash 作 key）
+```
+
+**支持的 provider**：Anthropic（Claude，需开启浏览器直连 header）、OpenAI 兼容（OpenAI / DeepSeek / Moonshot / 通义……）。
+
+**访问入口**：
+- V1 admin（含 iFinD 核验徽章 + 后端 LLM 摘要）：`http://127.0.0.1:8765/`
+- V2 BYOK 公开版（访客自带 key）：`http://127.0.0.1:8765/public/`
+
+**部署 BYOK**（V2 → 真正能被陌生人用）：
+1. 把 `static_public/` 整个目录推到 Cloudflare Pages / Vercel / GitHub Pages
+2. 在本机用 cron 把 `static_public/news.json` `rsync` 或推到 GitHub 上
+3. 域名指过去即可
+
 ## 下一步（可选）
+- **B5 部署**：当前 BYOK 仅在本机可访问，做 Cloudflare Pages 部署 + GitHub Actions 同步 JSON
 - **P6**：监控告警 + 历史归档清理
-- 性能：summarizer 100 秒一次的延迟可考虑 streaming 输出
-- 前端：增加搜索 + 主题筛选 + 时间轴回放

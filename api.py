@@ -25,6 +25,7 @@ from query import feed, latest_summary
 
 ROOT = Path(__file__).resolve().parent
 STATIC_DIR = ROOT / "static"
+PUBLIC_DIR = ROOT / "static_public"
 
 app = FastAPI(title="News Radar")
 app.add_middleware(
@@ -165,3 +166,14 @@ if STATIC_DIR.exists():
         return FileResponse(STATIC_DIR / "index.html")
 
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+# BYOK public frontend (B version)
+if PUBLIC_DIR.exists():
+    @app.get("/public")
+    @app.get("/public/")
+    def public_index():
+        return FileResponse(PUBLIC_DIR / "index.html")
+
+    # also serves /public/news.json + /public/app.js + /public/style.css
+    app.mount("/public", StaticFiles(directory=PUBLIC_DIR, html=True),
+              name="public")

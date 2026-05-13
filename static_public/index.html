@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>News Radar · 公开版</title>
+<link rel="stylesheet" href="/public/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="dot" id="status-dot"></span>
+    <span class="brand-name">News Radar</span>
+    <span id="data-state" class="data-state">加载中…</span>
+  </div>
+  <div class="filters">
+    <label>最低重要度
+      <select id="min-importance">
+        <option value="1">1（全部）</option>
+        <option value="2" selected>2（重要+）</option>
+        <option value="3">3（红色）</option>
+      </select>
+    </label>
+    <button id="config-btn" title="配置 LLM API key">⚙ LLM 设置</button>
+    <button id="refresh-btn" title="手动刷新">↻ 刷新</button>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- LEFT: live feed (from static JSON, no API) -->
+  <section class="feed">
+    <div class="section-title">
+      <span>快讯流</span>
+      <span id="feed-count" class="count-badge">…</span>
+    </div>
+    <div id="feed-list" class="feed-list">
+      <div class="placeholder">加载中…</div>
+    </div>
+  </section>
+
+  <!-- RIGHT: 3 windows x 8 topics (BYOK — uses visitor's own LLM key) -->
+  <section class="summaries">
+    <div class="windows-tabs">
+      <button class="win-tab active" data-win="1h">1 小时</button>
+      <button class="win-tab" data-win="5h">5 小时</button>
+      <button class="win-tab" data-win="24h">24 小时</button>
+      <button id="summarize-btn" class="summarize-btn" title="生成本时间窗的摘要">✨ 生成摘要</button>
+      <span id="summary-meta" class="summary-meta"></span>
+    </div>
+    <div id="topics" class="topics-grid">
+      <div class="placeholder need-key">
+        请先在右上角「LLM 设置」中填入你自己的 Claude / OpenAI / DeepSeek 等 API key，
+        然后切换时间窗 + 点击「生成摘要」即可。
+        <br><br>
+        新闻流不需要 key，左侧应已显示。
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Cluster detail modal -->
+<div id="cluster-modal" class="modal hidden" onclick="if(event.target===this)closeModal()">
+  <div class="modal-body">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<!-- LLM Config modal -->
+<div id="config-modal" class="modal hidden" onclick="if(event.target===this)closeConfig()">
+  <div class="modal-body">
+    <button class="modal-close" onclick="closeConfig()">×</button>
+    <h3>LLM API 配置</h3>
+    <p class="config-help">
+      你的 key 只存在你浏览器的 localStorage，<b>从不上传到任何服务器</b>。
+      调用直接从你浏览器发到 LLM 服务商。
+    </p>
+    <form id="config-form">
+      <label>
+        <span class="lbl">服务商</span>
+        <select id="cfg-provider" name="provider">
+          <option value="anthropic">Anthropic (Claude)</option>
+          <option value="openai">OpenAI / 兼容（DeepSeek、Moonshot、通义…）</option>
+        </select>
+      </label>
+      <label>
+        <span class="lbl">API Key</span>
+        <input id="cfg-key" name="api_key" type="password" placeholder="sk-... 或 sk-ant-..." autocomplete="off">
+      </label>
+      <label>
+        <span class="lbl">模型 ID</span>
+        <input id="cfg-model" name="model" type="text">
+        <span class="hint" id="model-hint"></span>
+      </label>
+      <label>
+        <span class="lbl">Base URL（可选）</span>
+        <input id="cfg-baseurl" name="base_url" type="text" placeholder="留空则用官方默认">
+      </label>
+      <div class="actions">
+        <button type="button" class="btn-secondary" onclick="clearConfig()">清除</button>
+        <button type="submit" class="btn-primary">保存</button>
+      </div>
+    </form>
+    <details class="advice">
+      <summary>使用建议</summary>
+      <ul>
+        <li><b>Anthropic</b> 需要在 Console 开启 <code>anthropic-dangerous-direct-browser-access</code>；推荐 <code>claude-sonnet-4-5</code> 或 <code>claude-3-5-sonnet-20241022</code>。</li>
+        <li><b>OpenAI 兼容</b> 任何兼容 <code>/v1/chat/completions</code> 的端点都可。DeepSeek 例：base_url=<code>https://api.deepseek.com</code>，model=<code>deepseek-chat</code>。</li>
+        <li>单次摘要约消耗 8-15K input + 2-3K output token。</li>
+      </ul>
+    </details>
+  </div>
+</div>
+
+<script src="/public/app.js"></script>
+</body>
+</html>

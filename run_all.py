@@ -11,7 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 PY = sys.executable
 POLLERS = ["jin10", "wscn", "cls"]
-WORKERS = ["run_verifier", "run_summarizer", "run_api"]  # standalone scripts under ROOT
+WORKERS = ["run_verifier", "run_summarizer", "run_exporter", "run_api"]
 
 
 def main():
