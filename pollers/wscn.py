@@ -22,7 +22,6 @@ URLS = [
 ]
 
 logger = make_logger(NAME)
-conn = connect()
 
 
 def http_get_json(url: str, timeout: int = 10) -> dict:
@@ -51,7 +50,7 @@ def map_importance(score: int) -> int:
     return 1
 
 
-def fetch_once() -> int:
+def fetch_items() -> list[NewsItem]:
     last_err = None
     payload = None
     for url in URLS:
@@ -82,7 +81,11 @@ def fetch_once() -> int:
                 raw=d,
             )
         )
-    return insert_many(conn, items)
+    return items
+
+
+def fetch_once() -> int:
+    return insert_many(connect(), fetch_items())
 
 
 if __name__ == "__main__":

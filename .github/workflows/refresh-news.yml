@@ -1,0 +1,78 @@
+name: Refresh news.json
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'     # every 15 min — fits 2000 free min/month budget
+  workflow_dispatch:            # allow manual trigger from Actions UI
+
+permissions:
+  contents: read
+
+concurrency:
+  # if the previous run is still going, skip this trigger
+  group: refresh-news
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      # Use system python (3.12 already on ubuntu-latest); skip setup-python to save ~10s
+      - name: Install deps
+        run: |
+          python3 -m pip install --quiet requests
+
+      - name: Generate news.json
+        id: gen
+        run: |
+          python3 cloud_export.py --out news.json --window 24 | tee /tmp/result.json
+          echo "bytes=$(stat -c%s news.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload to public data repo via REST API
+        env:
+          PAT: ${{ secrets.DATA_REPO_PAT }}
+          DATA_REPO: ${{ secrets.DATA_REPO_PATH }}   # e.g. "Zhangchen-bit/newsradar-data"
+        run: |
+          set -e
+          if [ -z "$PAT" ] || [ -z "$DATA_REPO" ]; then
+            echo "::error::missing DATA_REPO_PAT or DATA_REPO_PATH secret"
+            exit 1
+          fi
+          API="https://api.github.com/repos/${DATA_REPO}/contents/news.json"
+
+          # GET current SHA (if file exists)
+          SHA=$(curl -fsS -H "Authorization: Bearer $PAT" \
+                  -H "Accept: application/vnd.github+json" \
+                  "$API?ref=main" 2>/dev/null | python3 -c "import json,sys;d=json.load(sys.stdin);print(d.get('sha',''))" || echo "")
+          echo "current sha: ${SHA:-<new file>}"
+
+          CONTENT_B64=$(base64 -w0 news.json)
+          MSG="refresh $(date -u +%Y-%m-%dT%H:%MZ) (${{ steps.gen.outputs.bytes }} bytes)"
+
+          BODY=$(python3 -c "
+          import json, os
+          d = {'message': os.environ['MSG'], 'content': os.environ['CB']}
+          sha = os.environ.get('SHA') or ''
+          if sha: d['sha'] = sha
+          print(json.dumps(d))
+          " )
+          MSG="$MSG" CB="$CONTENT_B64" SHA="$SHA" python3 -c "
+          import json, os
+          d = {'message': os.environ['MSG'], 'content': os.environ['CB']}
+          sha = os.environ.get('SHA') or ''
+          if sha: d['sha'] = sha
+          print(json.dumps(d))
+          " > /tmp/body.json
+
+          curl -fsS -X PUT -H "Authorization: Bearer $PAT" \
+               -H "Accept: application/vnd.github+json" \
+               -H "Content-Type: application/json" \
+               --data @/tmp/body.json \
+               "$API" | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          print('updated commit:', d.get('commit', {}).get('sha', '?')[:12])
+          "

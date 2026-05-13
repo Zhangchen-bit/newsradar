@@ -19,7 +19,6 @@ NAME = "cls"
 URL = "https://www.cls.cn/nodeapi/telegraphList?app=CailianpressWeb&os=web&sv=7.7.5&rn=30"
 
 logger = make_logger(NAME)
-conn = connect()
 
 
 LEVEL_MAP = {"A": 3, "B": 2, "C": 1}
@@ -41,7 +40,7 @@ def http_get_json(url: str, timeout: int = 10) -> dict:
     return json.loads(proc.stdout)
 
 
-def fetch_once() -> int:
+def fetch_items() -> list[NewsItem]:
     payload = http_get_json(URL, timeout=10)
     if payload.get("error"):
         raise RuntimeError(f"cls api error: {payload.get('error')}")
@@ -69,7 +68,11 @@ def fetch_once() -> int:
                 raw=d,
             )
         )
-    return insert_many(conn, items)
+    return items
+
+
+def fetch_once() -> int:
+    return insert_many(connect(), fetch_items())
 
 
 if __name__ == "__main__":

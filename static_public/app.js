@@ -8,7 +8,10 @@
 // 0. State + helpers
 // ============================================================================
 const $ = (id) => document.getElementById(id);
-const NEWS_JSON_URL = "/public/news.json";
+// Relative URL — resolves correctly both:
+//   * local dev (FastAPI at /public/): /public/news.json
+//   * GitHub Pages deploy (same dir): /newsradar-public/news.json
+const NEWS_JSON_URL = "news.json";
 const POLL_INTERVAL_MS = 30_000;
 const TOPICS = [
   "矛盾点", "多头信号", "空头信号", "地缘政治",

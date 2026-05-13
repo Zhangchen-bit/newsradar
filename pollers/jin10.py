@@ -21,7 +21,6 @@ HEADERS = {
 
 logger = make_logger(NAME)
 session = make_session(HEADERS)
-conn = connect()
 
 
 def parse_ts(s: str) -> int:
@@ -29,7 +28,8 @@ def parse_ts(s: str) -> int:
     return int(time.mktime(time.strptime(s, "%Y-%m-%d %H:%M:%S")))
 
 
-def fetch_once() -> int:
+def fetch_items() -> list[NewsItem]:
+    """Pull + parse; no DB side-effect. Used by both fetch_once and cloud_export."""
     r = session.get(URL, params={"channel": "-8200", "vip": "1"}, timeout=10)
     r.raise_for_status()
     payload = r.json()
@@ -57,7 +57,12 @@ def fetch_once() -> int:
                 raw=d,
             )
         )
-    return insert_many(conn, items)
+    return items
+
+
+def fetch_once() -> int:
+    items = fetch_items()
+    return insert_many(connect(), items)
 
 
 if __name__ == "__main__":
