@@ -27,12 +27,13 @@ jobs:
 
       - name: Commit if changed
         run: |
-          if git diff --quiet -- static_public/news.json; then
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name  "github-actions[bot]"
+          # `git add` first so both new and modified files are picked up
+          git add static_public/news.json
+          if git diff --staged --quiet; then
             echo "no changes to news.json, skipping commit"
             exit 0
           fi
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config user.name  "github-actions[bot]"
-          git add static_public/news.json
           git commit -m "data: refresh $(date -u +%Y-%m-%dT%H:%MZ)"
           git push
