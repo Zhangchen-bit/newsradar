@@ -1,0 +1,44 @@
+name: Deploy GitHub Pages
+
+# Trigger on:
+#   - any push to main (so frontend changes auto-deploy)
+#   - manual run (initial setup + debug)
+#   - completion of refresh-news.yml (so updated news.json gets republished)
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Refresh news.json"]
+    types: [completed]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only allow one deploy at a time; cancel queued runs to avoid stale uploads
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload static_public/ as artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: static_public
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -36,30 +36,37 @@
 
 ---
 
-## Step 2 — 启用 GitHub Pages
+## Step 2 — 启用 GitHub Pages（**Source 必须选 GitHub Actions**）
+
+⚠️ GitHub Pages 的 "Deploy from a branch" 模式只支持 `/` 或 `/docs` 两种 folder，**不能选 `/static_public`**。所以必须用 Actions 部署模式。
 
 1. 打开 `https://github.com/Zhangchen-bit/newsradar/settings/pages`
-2. **Source**：Deploy from a branch
-3. **Branch**：`main`
-4. **Folder**：`/static_public`
-5. Save
+2. **Source**：选 **GitHub Actions**（不是 Deploy from a branch）
+3. 页面上会列出几个推荐的 starter workflow——**全部忽略**，直接关掉
 
-等 1-2 分钟，页面顶部会出现：
-> Your site is live at `https://Zhangchen-bit.github.io/newsradar/`
+就这样，**不需要点 Save**——Actions 模式没有分支/folder 配置。
 
-打开这个 URL，前端能加载（但 `news.json` 还没生成，所以快讯流空着）。
+仓库已经包含 `.github/workflows/deploy-pages.yml`，会自动把 `static_public/` 当作 Pages 源发布。
 
 ---
 
-## Step 3 — 手动触发一次 Actions 把 news.json 灌进去
+## Step 3 — 手动触发两个 workflow
 
-1. 打开 `https://github.com/Zhangchen-bit/newsradar/actions`
-2. 左侧选 `Refresh news.json`
-3. 右上角 **Run workflow** → 选 main 分支 → Run
+打开 `https://github.com/Zhangchen-bit/newsradar/actions`
 
-等 30-60 秒看到绿色 ✓。Actions 会自动 commit 一条 `data: refresh ...`。
+**先跑 Refresh news.json**（生成数据）：
+1. 左侧选 `Refresh news.json` → Run workflow
 
-第一次跑完后再刷新 Pages URL，左栏应该出现快讯流。
+**再跑 Deploy GitHub Pages**（发布页面）：
+1. 左侧选 `Deploy GitHub Pages` → Run workflow
+
+> 实际上 Refresh news.json 跑完会自动触发 Deploy（已配 `workflow_run` 联动）。但首次手动触发一次，避免等。
+
+两个都绿色 ✓ 之后，访问：
+
+> `https://Zhangchen-bit.github.io/newsradar/`
+
+之后每次 cron 跑 Refresh news.json 后，会自动 push commit → 自动触发 Deploy Pages → 站点更新。
 
 ---
 
