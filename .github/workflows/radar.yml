@@ -5,8 +5,10 @@ name: Radar — refresh + deploy
 # so the repo history stays clean.
 on:
   schedule:
-    - cron: '*/10 * * * *'   # every 10 min — at 6 runs/hour, fits Pages
-                              # 10 builds/hour soft limit with margin.
+    # Dodge top-of-hour load by firing at :03, :13, :23, :33, :43, :53
+    # (GitHub Actions schedule is known to silently drop runs during
+    #  high-load round-number minutes). Still 6 runs/hour ≈ 10 min cadence.
+    - cron: '3,13,23,33,43,53 * * * *'
   workflow_dispatch:          # manual trigger
   push:
     branches: [main]
