@@ -140,7 +140,9 @@ def export(out_path: Path, window_hours: int = 24,
         "window_hours": window_hours,
         "cluster_count": len(clusters),
         "latest_ts": latest_ts,
-        "is_stale": (latest_ts > 0 and (int(time.time()) - latest_ts) > 3600),
+        # Mark stale only if latest news is older than 90 min — GitHub cron
+        # can lag 15-30 min so 60 min is too tight, would falsely flag.
+        "is_stale": (latest_ts > 0 and (int(time.time()) - latest_ts) > 5400),
         "source_status": status,
         "clusters": clusters,
     }

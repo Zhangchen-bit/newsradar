@@ -24,8 +24,13 @@ session = make_session(HEADERS)
 
 
 def parse_ts(s: str) -> int:
-    # jin10 returns "2025-05-11 09:12:34"
-    return int(time.mktime(time.strptime(s, "%Y-%m-%d %H:%M:%S")))
+    # jin10 returns "2025-05-11 09:12:34" in Beijing time (no TZ suffix).
+    # Anchor to Asia/Shanghai so the resulting epoch is correct regardless of
+    # where this code runs (local macOS = UTC+8, GitHub runner = UTC).
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    naive = datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
+    return int(naive.replace(tzinfo=ZoneInfo("Asia/Shanghai")).timestamp())
 
 
 def fetch_items() -> list[NewsItem]:

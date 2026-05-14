@@ -32,16 +32,20 @@ const state = {
   summarizing: false,
 };
 
-const fmtTime = (ts) => {
-  const d = new Date(ts * 1000), pad = (n) => String(n).padStart(2, "0");
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-};
-const fmtFullTime = (ts) => {
-  const d = new Date(ts * 1000), pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-};
+// All times display in 北京时间 (Asia/Shanghai), regardless of visitor's
+// browser timezone. Use Intl.DateTimeFormat with explicit timeZone.
+const _BJ_HM = new Intl.DateTimeFormat("zh-CN", {
+  hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Shanghai",
+});
+const _BJ_FULL = new Intl.DateTimeFormat("zh-CN", {
+  year: "numeric", month: "2-digit", day: "2-digit",
+  hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Shanghai",
+});
+const fmtTime = (ts) => _BJ_HM.format(new Date(ts * 1000));
+const fmtFullTime = (ts) => _BJ_FULL.format(new Date(ts * 1000));
 const fmtAgo = (ts) => {
-  const s = Math.floor(Date.now()/1000) - ts;
+  let s = Math.floor(Date.now()/1000) - ts;
+  if (s < 0) s = 0;   // clock skew / wrong-tz tolerance
   if (s < 60) return `${s}s 前`;
   if (s < 3600) return `${Math.floor(s/60)} 分钟前`;
   if (s < 86400) return `${Math.floor(s/3600)} 小时前`;
