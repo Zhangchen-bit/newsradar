@@ -1,0 +1,57 @@
+name: Refresh news + Deploy Pages
+
+# One-shot: generate news.json fresh in CI, bundle it into the Pages
+# artifact alongside static_public/*, deploy. news.json never lands in git,
+# so the repo history stays clean.
+on:
+  schedule:
+    - cron: '*/15 * * * *'   # every 15 min (GitHub cron may delay 5-15 min)
+  workflow_dispatch:          # manual trigger
+  push:
+    branches: [main]
+    paths:
+      - 'static_public/**'
+      - 'cloud_export.py'
+      - 'dedup.py'
+      - 'pollers/**'
+      - '.github/workflows/refresh-and-deploy.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install python deps
+        run: python3 -m pip install --quiet requests
+
+      - name: Generate news.json
+        run: |
+          python3 cloud_export.py --out static_public/news.json --window 24
+          ls -la static_public/news.json
+          python3 -c "import json; d=json.load(open('static_public/news.json')); print('clusters:', d['cluster_count'], 'stale:', d['is_stale'], 'sources:', d['source_status'])"
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload static_public/ as artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: static_public
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

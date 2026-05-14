@@ -50,23 +50,22 @@
 
 ---
 
-## Step 3 — 手动触发两个 workflow
+## Step 3 — 手动触发一次 workflow
 
 打开 `https://github.com/Zhangchen-bit/newsradar/actions`
 
-**先跑 Refresh news.json**（生成数据）：
-1. 左侧选 `Refresh news.json` → Run workflow
+1. 左侧选 `Refresh news + Deploy Pages` → 右上角 Run workflow → Run
 
-**再跑 Deploy GitHub Pages**（发布页面）：
-1. 左侧选 `Deploy GitHub Pages` → Run workflow
+一个 job 完成 30-60 秒。它会：
+1. 跑 cloud_export.py 生成最新的 `news.json`
+2. 把 `static_public/`（含 news.json）打包成 Pages artifact
+3. 直接发布到 GitHub Pages
 
-> 实际上 Refresh news.json 跑完会自动触发 Deploy（已配 `workflow_run` 联动）。但首次手动触发一次，避免等。
-
-两个都绿色 ✓ 之后，访问：
+绿色 ✓ 后访问：
 
 > `https://Zhangchen-bit.github.io/newsradar/`
 
-之后每次 cron 跑 Refresh news.json 后，会自动 push commit → 自动触发 Deploy Pages → 站点更新。
+之后 cron 每 15 分钟自动重复这一过程，news.json **不进 git 仓库**（保持仓库干净）。
 
 ---
 
