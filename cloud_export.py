@@ -21,6 +21,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 from dedup import simhash, hamming, CLUSTER_HAMMING_THRESHOLD, CLUSTER_WINDOW_SEC
+from filters import is_noise
 
 # Lazy import to keep startup snappy and let partial failures isolate
 SOURCES = {
@@ -132,7 +133,19 @@ def export(out_path: Path, window_hours: int = 24,
     cutoff = int(time.time()) - window_hours * 3600
     items_in_win = [it for it in raw_items if it.ts >= cutoff]
 
-    clusters = cluster_in_memory(items_in_win)[:max_clusters]
+    # drop promo / roundup noise BEFORE clustering so they don't anchor
+    # otherwise-clean clusters
+    dropped = {"promo": 0, "roundup": 0}
+    kept = []
+    for it in items_in_win:
+        drop, reason = is_noise(it.content)
+        if drop:
+            dropped[reason] = dropped.get(reason, 0) + 1
+        else:
+            kept.append(it)
+    status["_filter_dropped"] = dropped
+
+    clusters = cluster_in_memory(kept)[:max_clusters]
 
     latest_ts = max((c["ts"] for c in clusters), default=0)
     payload = {
