@@ -1,4 +1,4 @@
-name: Refresh news + Deploy Pages
+name: Radar — refresh + deploy
 
 # One-shot: generate news.json fresh in CI, bundle it into the Pages
 # artifact alongside static_public/*, deploy. news.json never lands in git,
