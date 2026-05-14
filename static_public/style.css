@@ -40,6 +40,11 @@ body {
 .dot.ok    { background: var(--green); animation: pulse 1.6s ease-in-out infinite; }
 .dot.stale { background: var(--yellow); }
 .dot.fail  { background: var(--red); }
+.dot.fetching { background: var(--accent); animation: fetching 0.6s ease-in-out infinite; }
+@keyframes fetching {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.5); opacity: 0.4; }
+}
 @keyframes pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(74, 220, 126, 0.6); }
   50%      { box-shadow: 0 0 0 6px rgba(74, 220, 126, 0); }

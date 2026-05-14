@@ -86,14 +86,22 @@ function updateConfigBtn() {
 // 2. News JSON loader (polling)
 // ============================================================================
 async function loadNews() {
+  // visible polling indicator — dot briefly turns into a fetching color
+  const wasState = $("status-dot").className;
+  $("status-dot").className = "dot fetching";
   try {
     const r = await fetch(NEWS_JSON_URL + `?t=${Date.now()}`, { cache: "no-store" });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const data = await r.json();
+    const prevTs = state.lastJsonTs;
     state.clusters = data.clusters || [];
     state.lastJsonTs = data.generated_at;
     updateDataState(data);
     renderFeed();
+    // brief flash if news.json itself is newer than what we had
+    if (data.generated_at > prevTs && prevTs > 0) {
+      $("data-state").textContent += " · 已收到新数据";
+    }
   } catch (e) {
     setDot("fail");
     $("data-state").textContent = `加载失败：${e.message}`;
@@ -104,10 +112,10 @@ function updateDataState(data) {
   const ago = fmtAgo(data.latest_ts || data.generated_at);
   if (data.is_stale) {
     setDot("stale");
-    $("data-state").textContent = `数据已过期（最新条目 ${ago}）`;
+    $("data-state").textContent = `数据已过期（最新条目 ${ago}）· 每 10 分钟自动刷新`;
   } else {
     setDot("ok");
-    $("data-state").textContent = `已同步 · 最新 ${ago}`;
+    $("data-state").textContent = `已同步 · 最新 ${ago} · 每 10 分钟自动刷新`;
   }
 }
 function setDot(cls) {

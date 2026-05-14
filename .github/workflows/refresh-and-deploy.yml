@@ -5,7 +5,8 @@ name: Refresh news + Deploy Pages
 # so the repo history stays clean.
 on:
   schedule:
-    - cron: '*/15 * * * *'   # every 15 min (GitHub cron may delay 5-15 min)
+    - cron: '*/10 * * * *'   # every 10 min — at 6 runs/hour, fits Pages
+                              # 10 builds/hour soft limit with margin.
   workflow_dispatch:          # manual trigger
   push:
     branches: [main]
